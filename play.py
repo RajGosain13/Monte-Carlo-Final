@@ -15,7 +15,9 @@ while not game.is_game_over():
 
     print("Legal moves:", moves)
     move = eval(input("Enter move (row, col): "))
-
+    while move not in moves:
+        print("Invalid Move. Please try again")
+        move = eval(input("Enter move (row, col): "))
     game.apply_move(move)
 
 game.print_board()
