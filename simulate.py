@@ -1,6 +1,9 @@
 from greedybot import GreedyBot
 from heuristicbot import HeuristicBot
+from mcts_tdl import MCTSTDLBot
 from mcts import MCTSBot
+from mcts_heuristic import MCTSHeuristicBot
+import time
 from othello import Othello, BLACK, WHITE
 
 def play_game(bot_black, bot_white):
@@ -84,10 +87,15 @@ def evaluate_matchup(bot_a, bot_b, n_games=1000):
 mcts_bot = MCTSBot()
 greedy_bot = GreedyBot()
 heuristic_bot = HeuristicBot()
-
+mctstdl_bot = MCTSTDLBot()
+mcts_heuristic_bot = MCTSHeuristicBot()
 
 #print("MCTS vs Greedy")
 #print(evaluate_matchup(mcts_bot, greedy_bot, n_games=10))
 
-print("MCTS vs Heuristic")
-print(evaluate_matchup(mcts_bot, heuristic_bot, n_games=10))
+print("MCTS vs MCTS-heuristic")
+start = time.time()
+results = evaluate_matchup(mcts_bot, mcts_heuristic_bot, n_games=15)
+elapsed = time.time() - start
+print(results)
+print(f"Time: {elapsed:.2f}s")
