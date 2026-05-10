@@ -39,7 +39,7 @@ class MCTSNode:
     def is_fully_expanded(self):
         return len(self.untried_moves) == 0
 
-    def best_child(self, exploration_weight=1.4):
+    def best_child(self, exploration_weight=1.4, heuristic_weight=0.2):
         best_score = float("-inf")
         best_children = []
 
@@ -51,7 +51,21 @@ class MCTSNode:
                 exploration = exploration_weight * math.sqrt(
                     math.log(self.visits) / child.visits
                 )
-                score = exploitation + exploration
+
+                # Progressive heuristic bias:
+                # - POSITION_WEIGHTS gives the move's Othello-specific value.
+                # - Dividing by 100 keeps the bonus on a similar scale as win rate.
+                # - Dividing by child.visits + 1 makes the heuristic fade as more
+                #   simulation results are collected for that child.
+                if child.move is None:
+                    heuristic = 0.0
+                else:
+                    r, c = child.move
+                    heuristic = POSITION_WEIGHTS[r][c] / 100.0
+
+                heuristic_bias = heuristic_weight * heuristic / (child.visits + 1)
+
+                score = exploitation + exploration + heuristic_bias
 
             if score > best_score:
                 best_score = score
@@ -78,9 +92,10 @@ class MCTSNode:
 
 
 class MCTSBotOpt:
-    def __init__(self, simulations=1000, exploration_weight=1.4):
+    def __init__(self, simulations=200, exploration_weight=1.4, heuristic_weight=0.2):
         self.simulations = simulations
         self.exploration_weight = exploration_weight
+        self.heuristic_weight = heuristic_weight
 
     def choose_move(self, game, player=None):
         root_player = game.current_player
@@ -97,7 +112,10 @@ class MCTSBotOpt:
                 and node.is_fully_expanded()
                 and node.children
             ):
-                node = node.best_child(self.exploration_weight)
+                node = node.best_child(
+                    exploration_weight=self.exploration_weight,
+                    heuristic_weight=self.heuristic_weight
+                )
 
             if not node.state.is_game_over() and not node.is_fully_expanded():
                 node = node.expand()
@@ -133,37 +151,12 @@ class MCTSBotOpt:
             return 0.0
 
     def rollout_policy(self, state, moves):
-        player = state.current_player
-
         corners = [(0, 0), (0, 7), (7, 0), (7, 7)]
         corner_moves = [move for move in moves if move in corners]
-
         if corner_moves:
             return random.choice(corner_moves)
 
-        dangerous_by_corner = {
-            (0, 0): [(0, 1), (1, 0), (1, 1)],
-            (0, 7): [(0, 6), (1, 6), (1, 7)],
-            (7, 0): [(6, 0), (6, 1), (7, 1)],
-            (7, 7): [(6, 6), (6, 7), (7, 6)],
-        }
-
-        safe_moves = moves[:]
-
-        for corner, danger_squares in dangerous_by_corner.items():
-            cr, cc = corner
-
-            # Only avoid nearby squares if corner is still empty
-            if state.board[cr][cc] == 0:
-                safe_moves = [
-                    move for move in safe_moves
-                    if move not in danger_squares
-                ]
-
-        if safe_moves:
-            moves = safe_moves
-
-        return max(moves, key=lambda move: POSITION_WEIGHTS[move[0]][move[1]])
+        return random.choice(moves)
 
     def backpropagate(self, node, result):
         while node is not None:
