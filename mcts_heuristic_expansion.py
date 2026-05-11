@@ -83,8 +83,8 @@ class MCTSNode:
         return child
 
 
-class MCTSHeuristicBot:
-    def __init__(self, simulations=200, exploration_weight=1.4):
+class MCTSHeuristicExpansionBot:
+    def __init__(self, simulations=100, exploration_weight=1.4):
         self.simulations = simulations
         self.exploration_weight = exploration_weight
 
