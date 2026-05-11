@@ -46,7 +46,6 @@ class MCTSNode:
 
         self.children = []
 
-        # sort untried moves by learned weight ascending so best is popped last
         moves = state.get_legal_moves()
         if not moves and not state.is_game_over():
             moves = [None]
@@ -80,8 +79,7 @@ class MCTSNode:
 
         return random.choice(best_children)
 
-    def expand(self, w):
-        # pick the highest scoring untried move according to learned weight
+    def expand(self):
         best_i = max(
             range(len(self.untried_moves)),
             key=lambda i: SQUARE_WEIGHTS[self.untried_moves[i][0]][self.untried_moves[i][1]]
@@ -104,7 +102,7 @@ class MCTSNode:
 
 
 class MCTSCombinedBot:
-    def __init__(self, simulations=1000, exploration_weight=1.4, alpha=0.1, epsilon=0.1):
+    def __init__(self, simulations=100, exploration_weight=1.4, alpha=0.1, epsilon=0.1):
         self.simulations = simulations
         self.exploration_weight = exploration_weight
         self.alpha = alpha
@@ -135,7 +133,7 @@ class MCTSCombinedBot:
                 node = node.best_child(self.exploration_weight)
 
             if not node.state.is_game_over() and not node.is_fully_expanded():
-                node = node.expand(self.w)
+                node = node.expand()
 
             result = self.rollout(node.state.clone(), root_player)
 
@@ -148,7 +146,6 @@ class MCTSCombinedBot:
         return best_child.move
 
     def rollout(self, state, root_player):
-        # full random rollout to the end — same as baseline mcts.py
         while not state.is_game_over():
             moves = state.get_legal_moves()
             if moves:
@@ -167,11 +164,24 @@ class MCTSCombinedBot:
             return 0.0
 
     def rollout_policy(self, state, moves):
-        # prefer corners, otherwise random — same as baseline mcts.py
         corners = [(0, 0), (0, 7), (7, 0), (7, 7)]
         corner_moves = [m for m in moves if m in corners]
         if corner_moves:
             return random.choice(corner_moves)
+
+        if random.random() < 0.5:
+            player = state.current_player
+            best_move = None
+            best_v = -1.0
+            for move in moves:
+                next_s = state.clone()
+                next_s.apply_move(move)
+                v = _predict(next_s, player, self.w)
+                if v > best_v:
+                    best_v = v
+                    best_move = move
+            return best_move
+
         return random.choice(moves)
 
     def backpropagate(self, node, result):
@@ -209,7 +219,6 @@ class MCTSCombinedBot:
 
         winner = state.get_winner()
 
-        # TD(1): update every state using true final outcome
         for visited_state, player in history:
             result = 1.0 if winner == player else (0.5 if winner == 0 else 0.0)
             v = _predict(visited_state, player, self.w)
