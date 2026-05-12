@@ -3,7 +3,12 @@ from heuristicbot import HeuristicBot
 from mcts_tdl import MCTSTDLBot
 from mcts import MCTSBot
 from mcts_heuristic import MCTSHeuristicBot
+from mcts_combined import MCTSCombinedBot
+from mcts_optimized import MCTSBotOpt
+from mcts_shallow import MCTSShallowBot
+from mcts_heuristic_expansion import MCTSHeuristicExpansionBot
 import time
+import os
 from othello import Othello, BLACK, WHITE
 
 def play_game(bot_black, bot_white):
@@ -87,15 +92,47 @@ def evaluate_matchup(bot_a, bot_b, n_games=1000):
 mcts_bot = MCTSBot()
 greedy_bot = GreedyBot()
 heuristic_bot = HeuristicBot()
-mctstdl_bot = MCTSTDLBot()
+mctstd_bot = MCTSTDLBot()
 mcts_heuristic_bot = MCTSHeuristicBot()
+mcts_combined_bot = MCTSCombinedBot()
+mcts_optimized_bot = MCTSBotOpt()
+mcts_shallow_bot = MCTSShallowBot()
+mcts_expansion_bot = MCTSHeuristicExpansionBot()
 
-#print("MCTS vs Greedy")
-#print(evaluate_matchup(mcts_bot, greedy_bot, n_games=10))
+td1_bot = MCTSTDLBot()
+if not os.path.exists("tdl_weights.txt"):
+    td1_bot.train(num_games=10000)
+    print(f"Trained weight: {td1_bot.w}")
+else:
+    print(f"Loaded weight: {td1_bot.w}")
 
-print("MCTS vs MCTS-heuristic")
+print("mcts vs mcts_combined")
 start = time.time()
-results = evaluate_matchup(mcts_bot, mcts_heuristic_bot, n_games=15)
+results = evaluate_matchup(mcts_bot, mcts_combined_bot, n_games=500)
 elapsed = time.time() - start
 print(results)
 print(f"Time: {elapsed:.2f}s")
+
+"""
+game = Othello()
+n = 10
+
+bots = {
+    "GreedyBot":     GreedyBot(),
+    "HeuristicBot":  HeuristicBot(),
+    "MCTSBot":       MCTSBot(),
+    "MCTSTDLBot":    MCTSTDLBot(),
+    "MCTSHeuristic": MCTSHeuristicBot(),
+    "MCTSCombined":  MCTSCombinedBot(),
+    "MCTSOptimized": MCTSBotOpt(),
+    "MCTSShallow":   MCTSShallowBot(),
+}
+
+for name, bot in bots.items():
+    total = 0
+    for _ in range(n):
+        start = time.time()
+        bot.choose_move(game.clone(), game.current_player)
+        total += time.time() - start
+    print(f"{name}: {total/n:.4f}s avg over {n} runs")
+"""
